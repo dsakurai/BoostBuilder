@@ -19,7 +19,7 @@
 # See the License for more information.
 #-----------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.17)
 project(BoostBuilder)
 
 #-----------------------------------------------------------------------
@@ -53,6 +53,9 @@ set(Boost_INSTALLED_LIBRARIES
   system
   test
   thread
+  CACHE
+  STRING
+  "List of libraries to be built. Split libraries with ';'."
   )
 set(Boost_CONFIGURE_ARGS )
 set(Boost_BUILD_ARGS )
@@ -127,11 +130,17 @@ Boost_Get_ToolsetId(_boost_toolset)
 #https://cdcvs.fnal.gov/redmine/projects/build-framework/repository/boost-ssi-build/revisions/master/entry/build_boost.sh
 
 # For GCC/Clang (could also add logic for 1y/14)
-set(Boost_CXX_STANDARD_FLAGS "-std=c++11")
+if (NOT CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD "c++11" CACHE STRING "C++ standard to be passed to the compiler.")
+endif (NOT CMAKE_CXX_STANDARD)
+#
+set(Boost_CXX_STANDARD_FLAGS "-std=${CMAKE_CXX_STANDARD}")
 
-# For Apple, though Mavericks onwards should defaualt to libc++
+# For clang, though Mavericks onwards should default to libc++
 if(CMAKE_COMPILER_ID STREQUAL "AppleClang")
-  set(Boost_CXX_STANDARD_FLAGS "${Boost_CXX_STANDARD_FLAGS} -stdlib=libc++")
+    set(Boost_CXX_FLAGS "-stdlib=libc++" CACHE STRING "Pass to Boost Build as cxxflags. The C++ standard s.a. c++11 should be passed separately through CMAKE_CXX_STANDARD.")
+else()
+    set(Boost_CXX_FLAGS "" CACHE STRING "Pass to Boost Build as cxxflags. The C++ standard s.a. c++11 should be passed separately through CMAKE_CXX_STANDARD.")
 endif()
 
 if(_boost_toolset)
@@ -142,6 +151,8 @@ if(_boost_toolset)
   file(WRITE "${Boost_USER_CONFIG_JAMFILE}" "using ${_boost_toolset} : : ${CMAKE_CXX_COMPILER} : <cxxflags>\"${Boost_CXX_STANDARD_FLAGS}\" <linkflags>\"${Boost_CXX_STANDARD_FLAGS}\" ;")
   set(Boost_BUILD_USER_CONFIG_ARGS "--user-config=${PROJECT_BINARY_DIR}/user-config.jam")
   list(APPEND Boost_BUILD_ARGS     "${Boost_BUILD_USER_CONFIG_ARGS}")
+else()
+    message(FATAL_ERROR "Failed to detect the toolset")
 endif()
 
 # Construct the final library list to install
@@ -160,16 +171,12 @@ endif()
 #
 include(ExternalProject)
 ExternalProject_Add(boost
-  URL                 "https://downloads.sourceforge.net/project/boost/boost/1.59.0/boost_1_59_0.tar.bz2"
-  URL_HASH            SHA256=727a932322d94287b62abb1bd2d41723eec4356a7728909e38adb65ca25241ca
 
-  # If sourceforge downloads barf, copy by hand and stick it next to this
-  #URL                 ${PROJECT_SOURCE_DIR}/boost_1_59_0.tar.bz2
+  SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/boost-source/boost-vcs"
 
   BUILD_IN_SOURCE     1
   CONFIGURE_COMMAND   <SOURCE_DIR>/bootstrap.sh
                       --prefix=${CMAKE_INSTALL_PREFIX}
-                      # These can be adjusted
                       --libdir=${CMAKE_INSTALL_FULL_LIBDIR}
                       --includedir=${CMAKE_INSTALL_FULL_INCDIR}
                       ${Boost_CONFIGURE_ARGS}
@@ -177,7 +184,7 @@ ExternalProject_Add(boost
   BUILD_COMMAND       ""
   INSTALL_COMMAND     ./b2 -d2 -q -j${NJOBS} install
                       --layout=tagged
-                      --debug-configuration
+                      --debug-configuration # Show which configuration files are actually loaded
                       ${Boost_BUILD_ARGS}
   STEP_TARGETS        download update configure install
   )

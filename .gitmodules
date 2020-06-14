@@ -1,0 +1,3 @@
+[submodule "boost-source/boost-vcs"]
+	path = boost-source/boost-vcs
+	url = https://github.com/boostorg/boost.git
