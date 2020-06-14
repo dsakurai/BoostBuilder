@@ -160,6 +160,7 @@ if(NJOBS EQUAL 0)
 endif()
 
 message(WARNING "Use out-of-source build in Boost because it's horrible to maintain")
+message(WARNING "Build on Linux")
 
 #-----------------------------------------------------------------------
 # Build Boost
