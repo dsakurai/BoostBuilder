@@ -29,12 +29,6 @@ project(BoostBuilder)
 include(BoostBuildUtility.cmake)
 include(GNUInstallDirs)
 
-# Basic Boost Parameters
-set(Boost_MAJOR_VERSION 1)
-set(Boost_MINOR_VERSION 59)
-set(Boost_SUBMINOR_VERSION 0)
-set(Boost_VERSION "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
-
 # - List libraries to always build.
 # We will construct the final list in the setup phase because bootstrap
 # is pernickety about the --with/without-libraries being called more
@@ -131,14 +125,13 @@ Boost_Get_ToolsetId(_boost_toolset)
 
 # For GCC/Clang (could also add logic for 1y/14)
 if (NOT CMAKE_CXX_STANDARD)
-    set(CMAKE_CXX_STANDARD "c++11" CACHE STRING "C++ standard to be passed to the compiler.")
+    set(CMAKE_CXX_STANDARD "11" CACHE STRING "C++ standard to be passed to the compiler.")
 endif (NOT CMAKE_CXX_STANDARD)
 #
-set(Boost_CXX_STANDARD_FLAGS "-std=${CMAKE_CXX_STANDARD}")
+set(Boost_CXX_STANDARD_FLAGS "-std=c++${CMAKE_CXX_STANDARD}")
 
-# For clang, though Mavericks onwards should default to libc++
-if(CMAKE_COMPILER_ID STREQUAL "AppleClang")
-    set(Boost_CXX_FLAGS "-stdlib=libc++" CACHE STRING "Pass to Boost Build as cxxflags. The C++ standard s.a. c++11 should be passed separately through CMAKE_CXX_STANDARD.")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    set(Boost_CXX_FLAGS "-isysroot \"${CMAKE_OSX_SYSROOT}\"" CACHE STRING "Pass to Boost Build as cxxflags. The C++ standard s.a. c++11 should be passed separately through CMAKE_CXX_STANDARD.")
 else()
     set(Boost_CXX_FLAGS "" CACHE STRING "Pass to Boost Build as cxxflags. The C++ standard s.a. c++11 should be passed separately through CMAKE_CXX_STANDARD.")
 endif()
@@ -148,7 +141,7 @@ if(_boost_toolset)
   list(APPEND Boost_BUILD_ARGS     "toolset=${_boost_toolset}")
 
   set(Boost_USER_CONFIG_JAMFILE "${PROJECT_BINARY_DIR}/user-config.jam")
-  file(WRITE "${Boost_USER_CONFIG_JAMFILE}" "using ${_boost_toolset} : : ${CMAKE_CXX_COMPILER} : <cxxflags>\"${Boost_CXX_STANDARD_FLAGS}\" <linkflags>\"${Boost_CXX_STANDARD_FLAGS}\" ;")
+  file(WRITE "${Boost_USER_CONFIG_JAMFILE}" "using ${_boost_toolset} : : ${CMAKE_CXX_COMPILER} : <cxxflags>\"${Boost_CXX_STANDARD_FLAGS} ${Boost_CXX_FLAGS}\" <linkflags>\"${Boost_CXX_STANDARD_FLAGS} ${Boost_CXX_FLAGS}\" ;")
   set(Boost_BUILD_USER_CONFIG_ARGS "--user-config=${PROJECT_BINARY_DIR}/user-config.jam")
   list(APPEND Boost_BUILD_ARGS     "${Boost_BUILD_USER_CONFIG_ARGS}")
 else()
@@ -166,6 +159,22 @@ if(NJOBS EQUAL 0)
   set(NJOBS 1)
 endif()
 
+set(b2_commmand 
+    ./b2
+    -d2 -q -j${NJOBS} install
+    --layout=tagged
+    --debug-configuration # Show which configuration files are actually loaded
+    ${Boost_BUILD_ARGS}
+    )
+
+# Install the path (Somehow Boost Build doesn't do this propertly on macOS Catalina)
+if (APPLE)
+    set(b2_command
+        ${b2_command}
+        && "${CMAKE_CURRENT_SOURCE_DIR}/install_path.sh" "${CMAKE_INSTALL_FULL_LIBDIR}"
+        )
+endif (APPLE)
+
 #-----------------------------------------------------------------------
 # Build Boost
 #
@@ -182,10 +191,7 @@ ExternalProject_Add(boost
                       ${Boost_CONFIGURE_ARGS}
   # All in one build/install step is slightly faster
   BUILD_COMMAND       ""
-  INSTALL_COMMAND     ./b2 -d2 -q -j${NJOBS} install
-                      --layout=tagged
-                      --debug-configuration # Show which configuration files are actually loaded
-                      ${Boost_BUILD_ARGS}
+  INSTALL_COMMAND     ${b2_commmand}
   STEP_TARGETS        download update configure install
   )
 
@@ -209,6 +215,12 @@ ExternalProject_Add_Step(boost install_bcp
 # lifting of discovery of installed Boost libraries and setting
 # up appropriate import targets for them.
 #
+# Basic Boost Parameters
+set(Boost_MAJOR_VERSION 1)
+set(Boost_MINOR_VERSION 59)
+set(Boost_SUBMINOR_VERSION 0)
+set(Boost_VERSION "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
+
 set(Boost_INSTALL_CMAKEDIR "${CMAKE_INSTALL_FULL_LIBDIR}/cmake/Boost-${Boost_VERSION}")
 
 configure_file(
