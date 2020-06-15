@@ -159,8 +159,21 @@ if(NJOBS EQUAL 0)
   set(NJOBS 1)
 endif()
 
-message(WARNING "Use out-of-source build in Boost because it's horrible to maintain")
-message(WARNING "Build on Linux")
+set(b2_commmand 
+    ./b2
+    -d2 -q -j${NJOBS} install
+    --layout=tagged
+    --debug-configuration # Show which configuration files are actually loaded
+    ${Boost_BUILD_ARGS}
+    )
+
+# Install the path (Somehow Boost Build doesn't do this propertly on macOS Catalina)
+if (APPLE)
+    set(b2_command
+        ${b2_command}
+        && "${CMAKE_CURRENT_SOURCE_DIR}/install_path.sh" "${CMAKE_INSTALL_FULL_LIBDIR}"
+        )
+endif (APPLE)
 
 #-----------------------------------------------------------------------
 # Build Boost
@@ -178,14 +191,7 @@ ExternalProject_Add(boost
                       ${Boost_CONFIGURE_ARGS}
   # All in one build/install step is slightly faster
   BUILD_COMMAND       ""
-  INSTALL_COMMAND     ./b2
-                      -d2 -q -j${NJOBS} install
-                      --layout=tagged
-                      --debug-configuration # Show which configuration files are actually loaded
-                      ${Boost_BUILD_ARGS}
-                      # Install the path (Somehow Boost Build doesn't do this propertly on macOS Catalina)
-                      # This is a workaround for macOS; bad for Linux
-                      && "${CMAKE_CURRENT_SOURCE_DIR}/install_path.sh" "${CMAKE_INSTALL_FULL_LIBDIR}"
+  INSTALL_COMMAND     ${b2_commmand}
   STEP_TARGETS        download update configure install
   )
 
