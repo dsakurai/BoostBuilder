@@ -98,8 +98,7 @@ Vagrant.configure("2") do |config|
 
 
     # (On Ubuntu this is sudo apt-get install -y some_package)
-    sudo zypper -n install zsh
-    sudo zypper -n install tmux
+    sudo zypper -n install zsh git tmux
     sudo zypper -n install python-curses # for ranger
 
 
@@ -114,8 +113,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
 
     # Install dot_baby
-    mkdir /home/vagrant/.dot_baby
-    curl https://gitlab.com/dsakurai/dot_baby/-/archive/master/dot_baby-master.tar.gz | tar -xz -C /home/vagrant/.dot_baby --strip-components 1
+    git clone https://gitlab.com/dsakurai/dot_baby.git /home/vagrant/.dot_baby
     /home/vagrant/.dot_baby/details/setup/setup.sh
 
     # Build Boost
