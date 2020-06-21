@@ -105,10 +105,10 @@ endif (NOT CMAKE_CXX_STANDARD)
 set(Boost_CXX_STANDARD_FLAGS "-std=c++${CMAKE_CXX_STANDARD}")
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-    set(Boost_CXX_FLAGS "-isysroot \"${CMAKE_OSX_SYSROOT}\"" CACHE STRING "Pass to Boost Build as cxxflags. The C++ standard s.a. c++11 should be passed separately through CMAKE_CXX_STANDARD.")
+    set(Boost_CXX_FLAGS_DEFAULT "-isysroot \"${CMAKE_OSX_SYSROOT}\"")
 else()
-    set(Boost_CXX_FLAGS "" CACHE STRING "Pass to Boost Build as cxxflags. The C++ standard s.a. c++11 should be passed separately through CMAKE_CXX_STANDARD.")
 endif()
+set(Boost_CXX_FLAGS "${Boost_CXX_FLAGS_DEFAULT}" CACHE STRING "Pass to Boost Build as cxxflags. The C++ standard s.a. c++11 should be passed separately through CMAKE_CXX_STANDARD.")
 
 if(_boost_toolset)
   list(APPEND Boost_CONFIGURE_ARGS "toolset=${_boost_toolset}")
