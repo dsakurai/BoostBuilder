@@ -1,11 +1,6 @@
 # - CMake build/bundle script for Boost Libraries
 #   Automates build of Boost, allowing optional builds of library
 #   components plus CMake/pkg-config support files
-#
-# In current form, install Boost libraries in "tagged" layout so that
-# Release/Debug/Profile Single/Multithread variants can be installed
-# alongside each other. Fairly easy to modify to allow separation of
-# these.
 
 #-----------------------------------------------------------------------
 # Copyright (c) 2012-2013, Ben Morgan <bmorgan.warwick@gmail.com>
@@ -36,42 +31,21 @@ include(GNUInstallDirs)
 # The complete list of libraries provided by Boost can be found by
 # running the bootstrap.sh script supplied with Boost as:
 #   ./bootstrap.sh --with-libraries=all --show-libraries
-set(Boost_INSTALLED_LIBRARIES
-  date_time
-  filesystem
-  iostreams
-  math
-  program_options
-  random
+set(Boost_with_libraries
   serialization
   system
-  test
-  thread
   CACHE
   STRING
   "List of libraries to be built. Split libraries with ';'."
   )
+set(Boost_layout
+  system
+  CACHE
+  STRING
+  "naming of the library files (versioned/tagged/system)."
+  )
 set(Boost_CONFIGURE_ARGS )
 set(Boost_BUILD_ARGS )
-
-#-----------------------------------------------------------------------
-# VARIANTS
-#-----------------------------------------------------------------------
-# - Extra libraries - not complete, only most useful
-set(Boost_OPTIONAL_LIBRARIES
-  atomic
-  chrono
-  regex
-  timer
-  log
-  )
-
-foreach(_oplib ${Boost_OPTIONAL_LIBRARIES})
-  option(boost.${_oplib} "Build Boost.${_oplib} Library" OFF)
-  if(boost.${_oplib})
-    list(APPEND Boost_INSTALLED_LIBRARIES ${_oplib})
-  endif()
-endforeach()
 
 #-----------------------------------------------------------------------
 # - Threading model
@@ -149,7 +123,7 @@ else()
 endif()
 
 # Construct the final library list to install
-join_list(Boost_INSTALLED_LIBRARIES "," Boost_WITHLIBRARY_LIST)
+join_list(Boost_with_libraries "," Boost_WITHLIBRARY_LIST)
 list(APPEND Boost_CONFIGURE_ARGS --with-libraries=${Boost_WITHLIBRARY_LIST})
 
 # Parallelize build if possible
@@ -162,7 +136,7 @@ endif()
 set(b2_commmand 
     ./b2
     -d2 -q -j${NJOBS} install
-    --layout=tagged
+    --layout=${Boost_layout}
     --debug-configuration # Show which configuration files are actually loaded
     ${Boost_BUILD_ARGS}
     )
@@ -194,64 +168,3 @@ ExternalProject_Add(boost
   INSTALL_COMMAND     ${b2_commmand}
   STEP_TARGETS        download update configure install
   )
-
-#-----------------------------------------------------------------------
-# Custom step to build and install the bcp program
-# We need to use a custom set of layout and toolset arguments to
-# prevent "duplicate target" errors.
-#
-ExternalProject_Add_Step(boost install_bcp
-  COMMAND           ./b2 -d2 -q -j${NJOBS}
-                    ${Boost_BUILD_USER_CONFIG_ARGS}
-                    ./tools/bcp
-                    COMMAND           ${CMAKE_COMMAND} -E copy ./dist/bin/bcp ${CMAKE_INSTALL_FULL_BINDIR}/bcp
-  DEPENDEES         install
-  WORKING_DIRECTORY <BINARY_DIR>
-  )
-
-#-----------------------------------------------------------------------
-# Create and install CMake support files.
-# This uses a CMake script run at install time to do the heavy
-# lifting of discovery of installed Boost libraries and setting
-# up appropriate import targets for them.
-#
-# Basic Boost Parameters
-set(Boost_MAJOR_VERSION 1)
-set(Boost_MINOR_VERSION 59)
-set(Boost_SUBMINOR_VERSION 0)
-set(Boost_VERSION "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
-
-set(Boost_INSTALL_CMAKEDIR "${CMAKE_INSTALL_FULL_LIBDIR}/cmake/Boost-${Boost_VERSION}")
-
-configure_file(
-  ${PROJECT_SOURCE_DIR}/BoostWriteCMakeImportFiles.cmake.in
-  ${PROJECT_BINARY_DIR}/BoostWriteCMakeImportFiles.cmake
-  @ONLY
-  )
-
-configure_file(
-  ${PROJECT_SOURCE_DIR}/BoostConfigVersion.cmake.in
-  ${PROJECT_BINARY_DIR}/BoostConfigVersion.cmake
-  @ONLY
-  )
-
-configure_file(
-  ${PROJECT_SOURCE_DIR}/BoostConfig.cmake.in
-  ${PROJECT_BINARY_DIR}/BoostConfig.cmake
-  @ONLY
-  )
-
-# Step for installation of all the above, as required
-ExternalProject_Add_Step(boost install_cmake
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${Boost_INSTALL_CMAKEDIR}
-  COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/BoostWriteCMakeImportFiles.cmake
-  COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/BoostConfig.cmake ${Boost_INSTALL_CMAKEDIR}
-  COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/BoostConfigVersion.cmake ${Boost_INSTALL_CMAKEDIR}
-  DEPENDEES install
-  DEPENDS   ${PROJECT_SOURCE_DIR}/BoostLibraryDepends.cmake.in
-            ${PROJECT_BINARY_DIR}/BoostWriteCMakeImportFiles.cmake
-            ${PROJECT_BINARY_DIR}/BoostConfigVersion.cmake
-            ${PROJECT_BINARY_DIR}/BoostConfig.cmake
-  )
-
-
