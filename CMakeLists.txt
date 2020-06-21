@@ -133,7 +133,7 @@ if(NJOBS EQUAL 0)
   set(NJOBS 1)
 endif()
 
-set(b2_commmand 
+set(b2_command 
     ./b2
     -d2 -q -j${NJOBS} install
     --layout=${Boost_layout}
@@ -145,7 +145,7 @@ set(b2_commmand
 if (APPLE)
     set(b2_command
         ${b2_command}
-        && "${CMAKE_CURRENT_SOURCE_DIR}/install_path.sh" "${CMAKE_INSTALL_FULL_LIBDIR}"
+        && "${CMAKE_CURRENT_SOURCE_DIR}/install_path.py" "${CMAKE_INSTALL_FULL_LIBDIR}"
         )
 endif (APPLE)
 
@@ -165,5 +165,5 @@ ExternalProject_Add(boost
                       ${Boost_CONFIGURE_ARGS}
   # All in one build/install step is slightly faster
   BUILD_COMMAND       ""
-  INSTALL_COMMAND     ${b2_commmand}
+  INSTALL_COMMAND     ${b2_command}
   )
