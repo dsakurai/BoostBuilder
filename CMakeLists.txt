@@ -166,5 +166,4 @@ ExternalProject_Add(boost
   # All in one build/install step is slightly faster
   BUILD_COMMAND       ""
   INSTALL_COMMAND     ${b2_commmand}
-  STEP_TARGETS        download update configure install
   )
