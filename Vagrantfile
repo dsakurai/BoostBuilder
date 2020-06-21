@@ -125,7 +125,7 @@ Vagrant.configure("2") do |config|
     # and test
     mkdir /home/vagrant/build-test
     cd    /home/vagrant/build-test
-    cmake -DBOOST_ROOT=/home/vagrant/local -DBoost_ARCHITECTURE=-x64 /vagrant/test
+    cmake -DBOOST_ROOT=/home/vagrant/local /vagrant/test
     make
 
     ./test
